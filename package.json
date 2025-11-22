@@ -1,6 +1,6 @@
 {
   "name": "nest-sequelize-db",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "NestJS Sequelize DB Module for easy use of databases in NestJS applications",
   "main": "dist/db.module.js",
   "types": "dist/db.module.d.ts",
