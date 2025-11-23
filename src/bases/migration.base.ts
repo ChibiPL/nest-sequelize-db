@@ -1,3 +1,7 @@
+/**
+ * @author: Artur (Seti) Łabudziński
+ */
+
 import { DataType, Model, Sequelize } from 'sequelize-typescript';
 import { CreationAttributes, ModelAttributes } from 'sequelize/types/model';
 

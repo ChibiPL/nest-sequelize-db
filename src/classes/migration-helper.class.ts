@@ -1,3 +1,7 @@
+/**
+ * @author: Artur (Seti) Łabudziński
+ */
+
 import { Logger } from '@nestjs/common';
 import { DataTypes, QueryInterface, Transaction } from 'sequelize';
 import { abstractSequelizeMigrationUndeletedColumns, MigrationColumnDefinitions } from '../bases/migration.base';

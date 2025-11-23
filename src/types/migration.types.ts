@@ -1,3 +1,7 @@
+/**
+ * @author: Artur (Seti) Łabudziński
+ */
+
 import { QueryInterface } from 'sequelize';
 
 export interface MigrationBaseType { 

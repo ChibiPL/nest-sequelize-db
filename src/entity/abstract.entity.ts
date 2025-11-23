@@ -1,3 +1,7 @@
+/**
+ * @author: Artur (Seti) Łabudziński
+ */
+
 import { Includeable, Transaction } from 'sequelize';
 import { AllowNull, Column, DataType, Model } from 'sequelize-typescript';
 import { Col, Fn, Literal } from 'sequelize/types/utils';

@@ -1,10 +1,14 @@
+/**
+ * @author: Artur (Seti) Łabudziński
+ */
+
 import { BadRequestException, Injectable, Logger, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
 import Sequelize, { FindAndCountOptions, FindOptions, Op, Order, Transaction, WhereOptions } from 'sequelize';
 import { Model, ModelCtor, Sequelize as SequelizeType }                        from 'sequelize-typescript';
 import { IncludeOptions, InferAttributes }                                     from 'sequelize';
 import { Attributes, CreateOptions, CreationAttributes, WhereAttributeHash } from 'sequelize/types/model';
 import { DbCountAndRows, DefaultModelColumns, IncludeCustomOptions, OptionIgnoreIncludes, OptionIncludeables, OptionInvoker, OptionRaw, OptionSetUpdater, OptionTransaction, OrderElement } from '../entity/abstract.entity';
-import { GlobalSearchLimitConst } from 'src/consts/global-search-limit.const';
+import { GlobalSearchLimitConst } from '../consts/global-search-limit.const';
 
 
 @Injectable()
@@ -418,10 +422,10 @@ export abstract class AbstractDbService<TModelAttributes extends {} = any, TCrea
     
     
     try {
-      this._logger.log('findAll', {...params, transaction: params.transaction ? true : false});
-    } catch (e) {
+      this._logger.log('findAll', { ...params, transaction: params.transaction ? true : false });
+    } catch (error) {
       // ignored error of showing data
-      this._logger.log('findAll', '.....', {transaction: params.transaction ? true : false});
+      this._logger.log('findAll', '.....', { transaction: params.transaction ? true : false });
     }
     
     const ret = this.dbService.findAll<T>(params);
@@ -472,10 +476,10 @@ export abstract class AbstractDbService<TModelAttributes extends {} = any, TCrea
       this._logger.log('findWithCount', { ...params, transaction: params.transaction ? true : false });
 
       return this.dbService.findAndCountAll<T>(params);
-    } catch (e) {
+    } catch (error) {
       // ignored error of showing data
-      this._logger.log('findWithCount', '.....', {transaction: params.transaction ? true : false});
-      throw e;
+      this._logger.log('findWithCount', '.....', { transaction: params.transaction ? true : false });
+      throw error;
     }
   }
   
