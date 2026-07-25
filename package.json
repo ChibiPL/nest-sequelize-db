@@ -1,5 +1,5 @@
 {
-  "name": "@chibi/nest-sequelize-db",
+  "name": "@chibi.pl/nest-sequelize-db",
   "version": "0.0.2",
   "description": "NestJS Sequelize DB Module for easy use of databases in NestJS applications",
   "author": "Artur (Seti) Łabudziński",
