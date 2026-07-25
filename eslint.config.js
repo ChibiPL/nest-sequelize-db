@@ -170,9 +170,8 @@ module.exports = [
     languageOptions: {
       parser: parserTs,
       parserOptions: {
-        EXPERIMENTAL_useProjectService: {
-          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 20_000,
-        },
+        projectService: true,
+        tsconfigRootDir: __dirname,
       },
     },
     plugins: {
@@ -195,9 +194,8 @@ module.exports = [
     languageOptions: {
       parser: parserTs,
       parserOptions: {
-        EXPERIMENTAL_useProjectService: {
-          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 20_000,
-        },
+        projectService: true,
+        tsconfigRootDir: __dirname,
       },
     },
     plugins: {
@@ -218,9 +216,8 @@ module.exports = [
     languageOptions: {
       parser: parserTs,
       parserOptions: {
-        EXPERIMENTAL_useProjectService: {
-          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 20_000,
-        },
+        projectService: true,
+        tsconfigRootDir: __dirname,
       },
     },
     plugins: {

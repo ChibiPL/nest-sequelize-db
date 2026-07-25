@@ -128,8 +128,6 @@ export class ConfigurationDbService {
       this.cache[cacheKey] = tmp as any;
     }
   
-    console.log(`Cache wildcard get: ${key}    => [${this.cache[cacheKey]}]`);
-    
     return this.cache[cacheKey] === false ? undefined : this.cache[cacheKey] as unknown as T;
   }
   
@@ -203,7 +201,7 @@ export class ConfigurationDbService {
   
   deleteWildCards(field: string) {
     const searchFor = `not-existing:${field}`;
-    const keys = Object.keys(this.cache).filter(x => searchFor.startsWith(x));
+    const keys = Object.keys(this.cache).filter(x => x.startsWith(searchFor));
     
     for (const key of keys) {
       delete this.cache[key];

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { ModelCtor, Sequelize } from 'sequelize-typescript';
 import { Dialect } from 'sequelize/types';
 import { MigrationError, SequelizeStorage, Umzug } from 'umzug';
-import { MigrationModuleType, migrationsLanguageSpecificHelp } from './types/migration.types';
+import { MigrationModuleType, migrationsLanguageSpecificHelp } from './types/migration.type';
 
 const UmZugLogger: Logger & {
   info(message: any, context?: string): void;
@@ -30,7 +30,6 @@ export class DbModuleRegistry {
   private static migrationPaths: MigrationPathInfo[] = [];
 
   static registerModels(models: ModelCtor[]): void {
-    const modelNames = models.map(m => (m as any).name || m.tableName || 'unknown').join(', ');
     this.models.push(...models);
   }
 
@@ -231,17 +230,14 @@ export class DbModule implements OnApplicationBootstrap {
   }
 
   static forFeature(options: DbModuleFeatureOptions): DynamicModule {
-    const { models = [], modelProviders = [], migrationsPath, moduleName } = options;
-
-    console.log(`[DbModule.forFeature] Called with ${models.length} models`);
-    if (models.length > 0) {
-      const modelNames = models.map(m => (m as any).name || m.tableName || 'unknown').join(', ');
-      console.log(`[DbModule.forFeature] Model names: ${modelNames}`);
-    }
+    const { models = [], services = [], modelProviders = [], migrationsPath, moduleName } = options;
 
     // Register models, services, and providers
     if (models.length > 0) {
       DbModuleRegistry.registerModels(models);
+    }
+    if (services.length > 0) {
+      DbModuleRegistry.registerServices(services);
     }
     if (modelProviders.length > 0) {
       DbModuleRegistry.registerModelProviders(modelProviders);
@@ -256,10 +252,12 @@ export class DbModule implements OnApplicationBootstrap {
       module: DbModule,
       imports: models.length > 0 ? [SequelizeModule.forFeature(models)] : [],
       providers: [
+        ...services,
         ...modelProviders,
       ],
       exports: [
         SequelizeModule,
+        ...services,
         ...modelProviders.map(p => (p as any).provide).filter(Boolean),
       ],
     };
@@ -276,14 +274,6 @@ export class DbModule implements OnApplicationBootstrap {
 
     // Get models from registry (registered via forFeature)
     const registeredModels = DbModuleRegistry.getModels();
-    
-    // Log registered model names
-    if (registeredModels.length > 0) {
-      const registeredNames = registeredModels.map(m => (m as any).name || m.tableName || 'unknown').join(', ');
-    }
-    
-    // Check what models are already in Sequelize (from SequelizeModule.forFeature)
-    const existingModels = Object.values(this.sequelize.models);
     
     // CRITICAL: Add models from registry to sequelize-typescript instance via addModels()
     // SequelizeModule.forFeature() makes models available for DI but doesn't add them for syncing
@@ -354,12 +344,12 @@ export class DbModule implements OnApplicationBootstrap {
       if (err instanceof MigrationError) {
         (new Logger('DbModule - Migrations')).error(`${err?.message}`);
       } else {
-        (new Logger('DbModule')).error(`Could not connect with database: ${(err as Error)?.message}`);
+        this.logger.error(`Could not connect with database: ${(err as Error)?.message}`);
       }
-      console.log(err);
-      process.exit(1);
+
+      throw err;
     }
-    (new Logger('DbModule')).debug('Database Started');
+    this.logger.debug('Database Started');
   }
   
   protected async migrate() {

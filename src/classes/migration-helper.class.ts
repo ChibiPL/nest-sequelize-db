@@ -86,13 +86,16 @@ export class MigrationHelperClass {
   }
   
   columnData(table: string, column: string) {
+    // TODO: 
     console.log(this.columns[table][column]);
+    return this.columns[table]?.[column];
   }
   
   async addMissingColumns(table: string, columnData: MigrationColumnDefinitions, transaction?: Transaction) {
     for (const col in columnData) {
-      if (!this.columnExists(table, 'deletedAt')) {
+      if (!this.columnExists(table, col)) {
         console.debug(`[Column Added]: ${ table }.${col}`);
+        
         await this.queryInterface.addColumn(table, col, columnData[col], { transaction });
       } else {
         console.debug(`[Column Skipped]: ${ table }.${col}`);
@@ -111,11 +114,8 @@ export class MigrationHelperClass {
   
   columnLength(table: string, column: string) {
     const type: string = this.columns[table]?.[column]?.type || '';
-    console.log('type', type);
     const left = type.split('(')[1] || '0';
-    console.log('left', left);
     const right = left.split(')')[0] || '0';
-    console.log('right', right);
     
     return Number.parseInt(right) || 0;
   }
