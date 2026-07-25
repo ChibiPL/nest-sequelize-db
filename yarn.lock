@@ -468,9 +468,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@chibi/nest-sequelize-db@workspace:.":
+"@chibi.pl/nest-sequelize-db@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@chibi/nest-sequelize-db@workspace:."
+  resolution: "@chibi.pl/nest-sequelize-db@workspace:."
   dependencies:
     "@nestjs/cli": "npm:11.0.24"
     "@nestjs/common": "npm:11.1.28"
