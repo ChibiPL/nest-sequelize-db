@@ -1,4 +1,4 @@
-# @setitch/nest-sequelize-db
+# @chibi.pl/nest-sequelize-db
 
 Utilities for using `sequelize-typescript` with NestJS: a global database module, reusable entity and service base classes, configuration storage, and Umzug migration helpers.
 
@@ -12,7 +12,7 @@ Utilities for using `sequelize-typescript` with NestJS: a global database module
 ## Installation
 
 ```bash
-npm install @setitch/nest-sequelize-db @nestjs/sequelize sequelize sequelize-typescript
+npm install @chibi.pl/nest-sequelize-db @nestjs/sequelize sequelize sequelize-typescript
 ```
 
 Install the driver for the database used by your application. For PostgreSQL:
@@ -39,7 +39,7 @@ Register `DbModule` once in the application root. It is global, so feature modul
 
 ```ts
 import { Module } from '@nestjs/common';
-import { DbModule } from '@setitch/nest-sequelize-db';
+import { DbModule } from '@chibi.pl/nest-sequelize-db';
 
 @Module({
   imports: [
@@ -80,7 +80,7 @@ Extend `AbstractEntity` to add `createdBy`, `updatedBy`, `deletedBy`, `unDeleted
 
 ```ts
 import { Column, DataType, Table } from 'sequelize-typescript';
-import { AbstractEntity } from '@setitch/nest-sequelize-db';
+import { AbstractEntity } from '@chibi.pl/nest-sequelize-db';
 
 @Table({
   tableName: 'users',
@@ -102,7 +102,7 @@ Extend `AbstractDbService` to receive common CRUD operations, safe pagination, t
 ```ts
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { AbstractDbService } from '@setitch/nest-sequelize-db';
+import { AbstractDbService } from '@chibi.pl/nest-sequelize-db';
 import { UserEntity } from './user.entity';
 
 @Injectable()
@@ -142,7 +142,7 @@ Use `DbModule.forFeature()` to register models and services. Registered models a
 
 ```ts
 import { Module } from '@nestjs/common';
-import { DbModule } from '@setitch/nest-sequelize-db';
+import { DbModule } from '@chibi.pl/nest-sequelize-db';
 import { UserEntity } from './user.entity';
 import { UsersDbService } from './users-db.service';
 
@@ -183,7 +183,7 @@ The module discovers `.ts` and `.js` files in each `migrationsPath` passed to `f
 
 ```ts
 import { DataType } from 'sequelize-typescript';
-import type { MigrationBaseType } from '@setitch/nest-sequelize-db';
+import type { MigrationBaseType } from '@chibi.pl/nest-sequelize-db';
 
 export const migration: MigrationBaseType = {
   async up(queryInterface) {
@@ -211,7 +211,7 @@ For TypeScript migrations at runtime, install `ts-node` in the consuming applica
 
 ```ts
 import { DataType } from 'sequelize-typescript';
-import { MigrationHelperClass } from '@setitch/nest-sequelize-db';
+import { MigrationHelperClass } from '@chibi.pl/nest-sequelize-db';
 
 const helper = await MigrationHelperClass.from(queryInterface);
 await helper.prepare('users');
@@ -230,7 +230,7 @@ import {
   ConfigurationDbService,
   ConfigurationEntity,
   DbModule,
-} from '@setitch/nest-sequelize-db';
+} from '@chibi.pl/nest-sequelize-db';
 
 @Module({
   imports: [
