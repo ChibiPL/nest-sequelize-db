@@ -257,18 +257,25 @@ export class DbModule implements OnApplicationBootstrap {
       DbModuleRegistry.registerMigrationPath(migrationsPath, inferredModuleName);
     }
 
+    const featureImports = models.length > 0 ? [SequelizeModule.forFeature(models)] : [];
+    const featureExports: any[] = [
+      ...services,
+      ...modelProviders.map(p => (p as any).provide).filter(Boolean),
+    ];
+
+    // Only re-export SequelizeModule when we actually imported it.
+    if (models.length > 0) {
+      featureExports.unshift(SequelizeModule);
+    }
+
     return {
       module: DbModule,
-      imports: models.length > 0 ? [SequelizeModule.forFeature(models)] : [],
+      imports: featureImports,
       providers: [
         ...services,
         ...modelProviders,
       ],
-      exports: [
-        SequelizeModule,
-        ...services,
-        ...modelProviders.map(p => (p as any).provide).filter(Boolean),
-      ],
+      exports: featureExports,
     };
   }
   

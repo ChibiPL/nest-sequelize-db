@@ -136,6 +136,23 @@ describe('DbModule', () => {
       expect(DbModuleRegistry.getModelProviders()).toContain(provider);
       expect(DbModuleRegistry.getMigrationPaths().length).toBeGreaterThan(0);
     });
+
+    it('should compile forFeature with services only', async () => {
+      const module = await Test.createTestingModule({
+        imports: [
+          DbModule.forRoot({
+            dialect: 'sqlite',
+            database: TEST_MEMORY_DB,
+          }),
+          DbModule.forFeature({
+            services: [{ provide: 'PlainService', useValue: {} }],
+          }),
+        ],
+      }).compile();
+
+      expect(module).toBeDefined();
+      await module.close();
+    });
   });
 
   describe('onApplicationBootstrap', () => {
