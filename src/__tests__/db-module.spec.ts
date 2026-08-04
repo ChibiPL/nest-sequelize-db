@@ -1,3 +1,4 @@
+import { Inject, Injectable, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import * as process from 'node:process';
 import { Sequelize } from 'sequelize-typescript';
@@ -285,6 +286,83 @@ describe('DbModule', () => {
       expect(foundUser?.name).toBe('Test User');
 
       await closeTestModule(module);
+    });
+  });
+
+  describe('exports consistency (regression: UnknownExportException)', () => {
+    // Nest only allows a DynamicModule to export a provider that is also part
+    // of that same module instance's `providers` array (or one of its imports).
+    // forRoot() exports every provider/service registered via forFeature() through
+    // the shared DbModuleRegistry, so it must also re-declare them as providers.
+    it('forRoot() should only export providers that are part of its own providers array', () => {
+      // Simulate a feature module (e.g. AuditModule) registering a custom
+      // modelProvider/service BEFORE forRoot() is evaluated - this mirrors the
+      // real-world decorator evaluation order where feature modules are
+      // imported (and thus their forFeature() calls executed) before the
+      // root AppModule's forRoot() call runs.
+      DbModule.forFeature({
+        modelProviders: [{ provide: 'RegressionEntity', useValue: {} }],
+        services: [{ provide: 'RegressionService', useValue: {} }],
+      });
+
+      const rootModule = DbModule.forRoot({
+        dialect: 'sqlite',
+        database: TEST_MEMORY_DB,
+      });
+
+      const providerTokens = (rootModule.providers || []).map((p: any) =>
+        typeof p === 'function' ? p : p.provide,
+      );
+
+      for (const exported of rootModule.exports || []) {
+        // Class/module references (e.g. SequelizeModule) are allowed even if
+        // not explicitly in `providers` because Nest resolves them via imports;
+        // only string/symbol tokens must be backed by a matching provider here.
+        if (typeof exported === 'string' || typeof exported === 'symbol') {
+          expect(providerTokens).toContain(exported);
+        }
+      }
+
+      expect(providerTokens).toContain('RegressionEntity');
+      expect(providerTokens).toContain('RegressionService');
+    });
+
+    it('should resolve a modelProvider registered before forRoot() across the whole app (real-world ordering)', async () => {
+      const TOKEN = 'SimpleRequestLogsEntity';
+
+      // 1. Feature module registers its provider first (simulates AuditModule).
+      DbModule.forFeature({
+        modelProviders: [{ provide: TOKEN, useValue: { fake: true } }],
+      });
+
+      // 2. A consumer depends on that token without importing DbModule.forFeature
+      //    directly - relying on DbModule being @Global().
+      @Injectable()
+      class ConsumerService {
+        constructor(@Inject(TOKEN) public readonly auditDb: any) {}
+      }
+
+      @Module({
+        providers: [ConsumerService],
+        exports: [ConsumerService],
+      })
+      class ConsumerModule {}
+
+      // 3. Root module is created after the feature registration, exactly like
+      //    AppModule's DbModule.forRoot() call in backend-new.
+      const rootModule = DbModule.forRoot({
+        dialect: 'sqlite',
+        database: TEST_MEMORY_DB,
+      });
+
+      const module = await Test.createTestingModule({
+        imports: [rootModule, ConsumerModule],
+      }).compile();
+
+      const consumer = module.get(ConsumerService);
+      expect(consumer.auditDb).toEqual({ fake: true });
+
+      await module.close();
     });
   });
 });
