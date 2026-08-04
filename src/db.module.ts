@@ -1,5 +1,4 @@
 import { DynamicModule, Global, Logger, Module, OnApplicationBootstrap, Provider } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
 import { InjectConnection, SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { join } from 'node:path';
 import { ModelCtor, Sequelize } from 'sequelize-typescript';
@@ -194,6 +193,9 @@ export class DbModule implements OnApplicationBootstrap {
             },
             inject: [Sequelize],
           },
+          // Re-provide registered model providers/services so they can be exported from this module instance (Nest requires exports to be part of providers).
+          ...DbModuleRegistry.getModelProviders(),
+          ...DbModuleRegistry.getServices(),
         ],
         exports: [
           Sequelize,
@@ -225,8 +227,9 @@ export class DbModule implements OnApplicationBootstrap {
           },
           inject: [Sequelize],
         },
-        // Note: Models and services registered via forFeature() will be added in onApplicationBootstrap
-        // after all modules are loaded, so we don't add them here
+        // Re-provide registered model providers/services so they can be exported from this module instance (Nest requires exports to be part of providers).
+        ...DbModuleRegistry.getModelProviders(),
+        ...DbModuleRegistry.getServices(),
       ],
       exports: [
         connectionName === 'default' ? 'SEQUELIZE' : sequelizeToken,
@@ -311,7 +314,7 @@ export class DbModule implements OnApplicationBootstrap {
     
     // Log all model names for debugging
     if (allSequelizeModels.length > 0) {
-      const modelNames = allSequelizeModels.map(m => {
+      allSequelizeModels.map(m => {
         const name = (m as any).name || (m as any).tableName || 'unknown';
         const tableName = (m as any).tableName || name;
 
