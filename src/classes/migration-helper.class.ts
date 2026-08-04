@@ -4,7 +4,7 @@
 
 import { Logger } from '@nestjs/common';
 import { DataTypes, QueryInterface, Transaction } from 'sequelize';
-import { abstractSequelizeMigrationUndeletedColumns, MigrationColumnDefinitions } from '../bases/migration.base';
+import { MigrationColumnDefinitions } from '../bases/migration.base';
 
 type HashString = string;
 
@@ -54,7 +54,7 @@ export class MigrationHelperClass {
     return fields.map(x => `${x} = ${flag ? `:${x}` : '?'}`).join(',');
   }
 
-  getUpdateQueryValuesFromObject<T = boolean>(obj: object, flag = false) {
+  getUpdateQueryValuesFromObject<T = boolean>(obj: object, _flag = false) {
     const fields = Object.keys(obj).sort();
     
     // if (flag) {
@@ -73,7 +73,7 @@ export class MigrationHelperClass {
   getInsertQueryValuesPlaceholder(obj: object) {
     const fields = Object.keys(obj).sort();
   
-    return fields.map(f => '?').join(',');
+    return fields.map(_f => '?').join(',');
   }
   
   tableExists(table: string): boolean {
@@ -88,6 +88,7 @@ export class MigrationHelperClass {
   columnData(table: string, column: string) {
     // TODO: 
     console.log(this.columns[table][column]);
+    
     return this.columns[table]?.[column];
   }
   
@@ -109,6 +110,7 @@ export class MigrationHelperClass {
       return DataTypes.STRING;
     }
     
+    console.log(type);
     // TODO: More types there
   }
   

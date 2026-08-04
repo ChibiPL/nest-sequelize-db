@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { ModelCtor, Sequelize } from 'sequelize-typescript';
 import { Dialect } from 'sequelize/types';
 import { MigrationError, SequelizeStorage, Umzug } from 'umzug';
+import { TEST_MEMORY_DB } from './consts/tests.consts';
 import { MigrationModuleType, migrationsLanguageSpecificHelp } from './types/migration.type';
 
 const UmZugLogger: Logger & {
@@ -105,19 +106,20 @@ export class DbModule implements OnApplicationBootstrap {
   
   constructor(
     @InjectConnection() private readonly sequelize: Sequelize,
-    private moduleRef: ModuleRef,
   ) {}
 
   static forRoot(options?: DbModuleRootOptions): DynamicModule {
     const getSequelizeOptions = (): SequelizeModuleOptions => {
       const connectionName = options?.connectionName;
+      const database = options?.database || process.env.DB_DATABASE || 'db-schema';
       const baseOptions: SequelizeModuleOptions = {
         dialect: options?.dialect || (process.env.DB_DIALECT ? (process.env.DB_DIALECT as Dialect) : 'sqlite'),
         host: options?.host || process.env.DB_HOST || '127.0.0.1',
         port: options?.port || Number.parseInt(process.env.DB_PORT || '3306'),
         username: options?.username || process.env.DB_USER || 'root',
         password: options?.password || process.env.DB_PASS || 'root-pass',
-        database: options?.database || process.env.DB_DATABASE || 'db-schema',
+        database,
+        storage: database === TEST_MEMORY_DB ? TEST_MEMORY_DB : undefined,
         models: [],
         autoLoadModels: false,
         synchronize: false,
@@ -171,7 +173,14 @@ export class DbModule implements OnApplicationBootstrap {
       
       return {
         module: DbModule,
-        imports: [],
+        imports: [
+          SequelizeModule.forRootAsync({
+            useFactory: async () => {
+              // Models will be added in onApplicationBootstrap after all modules are loaded
+              return sequelizeOptions;
+            },
+          }),
+        ],
         providers: [
           {
             provide: Sequelize,
@@ -312,7 +321,7 @@ export class DbModule implements OnApplicationBootstrap {
 
     // Sync models - forced for tests, soft (alter) for other environments
     // This will sync ALL models in the Sequelize instance, including those from forFeature
-    const isTest = process.env.node_env === 'test';
+    const isTest = process.env.node_env?.toLowerCase() === 'test';
     this.logger.verbose(`Syncing models (isTest: ${isTest}, dialect: ${this.sequelize.getDialect()})`);
     
     try {

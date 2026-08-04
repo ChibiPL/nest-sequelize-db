@@ -478,6 +478,7 @@ __metadata:
     "@nestjs/event-emitter": "npm:3.0.1"
     "@nestjs/schedule": "npm:6.0.1"
     "@nestjs/sequelize": "npm:11.0.1"
+    "@nestjs/testing": "npm:11.1.28"
     "@stylistic/eslint-plugin-js": "npm:^2.1.0"
     "@stylistic/eslint-plugin-ts": "npm:^2.1.0"
     "@types/jest": "npm:^30.0.0"
@@ -1502,6 +1503,25 @@ __metadata:
     sequelize: ^6.3.5
     sequelize-typescript: ^2.0.0
   checksum: 10c0/df0a529649b8a7eccc6c5fb36e3ee4ad964d8b20d12995ede00ff36b2644b9a2ededbf7257911e1361e19da43cfebd49a0744f35e928f058817e380226385d76
+  languageName: node
+  linkType: hard
+
+"@nestjs/testing@npm:11.1.28":
+  version: 11.1.28
+  resolution: "@nestjs/testing@npm:11.1.28"
+  dependencies:
+    tslib: "npm:2.8.1"
+  peerDependencies:
+    "@nestjs/common": ^11.0.0
+    "@nestjs/core": ^11.0.0
+    "@nestjs/microservices": ^11.0.0
+    "@nestjs/platform-express": ^11.0.0
+  peerDependenciesMeta:
+    "@nestjs/microservices":
+      optional: true
+    "@nestjs/platform-express":
+      optional: true
+  checksum: 10c0/7d111a40cceb57b492610caa6cf875debe8a010083765f5bc10c3943c4f6ff7c2f15afb55fcbcd4e329f68b9c646f68a6d0caa319ab1b3b31f08a833f30e233a
   languageName: node
   linkType: hard
 

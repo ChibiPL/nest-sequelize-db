@@ -63,6 +63,7 @@
     "@nestjs/event-emitter": "3.0.1",
     "@nestjs/schedule": "6.0.1",
     "@nestjs/sequelize": "11.0.1",
+    "@nestjs/testing": "11.1.28",
     "@stylistic/eslint-plugin-js": "^2.1.0",
     "@stylistic/eslint-plugin-ts": "^2.1.0",
     "@types/jest": "^30.0.0",
