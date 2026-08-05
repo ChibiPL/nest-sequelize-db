@@ -96,6 +96,13 @@ export interface DbModuleRootOptions {
   };
 }
 
+export interface DbModuleAsyncOptions {
+  connectionName?: string; // Optional connection name for multiple connections (must be known synchronously)
+  imports?: any[];
+  inject?: any[];
+  useFactory: (...args: any[]) => Promise<DbModuleRootOptions> | DbModuleRootOptions;
+}
+
 @Global()
 @Module({})
 export class DbModule implements OnApplicationBootstrap {
@@ -107,55 +114,55 @@ export class DbModule implements OnApplicationBootstrap {
     @InjectConnection() private readonly sequelize: Sequelize,
   ) {}
 
-  static forRoot(options?: DbModuleRootOptions): DynamicModule {
-    const getSequelizeOptions = (): SequelizeModuleOptions => {
-      const connectionName = options?.connectionName;
-      const database = options?.database || process.env.DB_DATABASE || 'db-schema';
-      const baseOptions: SequelizeModuleOptions = {
-        dialect: options?.dialect || (process.env.DB_DIALECT ? (process.env.DB_DIALECT as Dialect) : 'sqlite'),
-        host: options?.host || process.env.DB_HOST || '127.0.0.1',
-        port: options?.port || Number.parseInt(process.env.DB_PORT || '3306'),
-        username: options?.username || process.env.DB_USER || 'root',
-        password: options?.password || process.env.DB_PASS || 'root-pass',
-        database,
-        storage: database === TEST_MEMORY_DB ? TEST_MEMORY_DB : undefined,
-        models: [],
-        autoLoadModels: false,
-        synchronize: false,
-        logging: options?.logging ?? (process.env?.DB_LOGGING?.toLocaleLowerCase() === 'true'),
-        benchmark: options?.benchmark ?? (process.env?.DB_BENCHMARK?.toLocaleLowerCase() === 'true'),
-        pool: {
-          max: options?.pool?.max ?? 16,
-          min: options?.pool?.min ?? 1,
-          idle: options?.pool?.idle ?? 30_000,
-          acquire: options?.pool?.acquire ?? 10_000,
-        },
-      };
-
-      // Add connection name if provided (for multiple connections)
-      if (connectionName) {
-        (baseOptions as any).name = connectionName;
-      }
-
-      const sslEnabled = options?.ssl ?? (process.env.DB_SSL && process.env.DB_SSL.toLocaleLowerCase() === 'true');
-      if (sslEnabled) {
-        baseOptions.ssl = true;
-        baseOptions.dialectOptions = {
-          ssl: {
-            require: true,
-          },
-          decimalNumbers: true,
-        };
-      } else {
-        baseOptions.dialectOptions = {
-          decimalNumbers: true,
-        };
-      }
-
-      return baseOptions;
+  private static buildSequelizeOptions(options?: DbModuleRootOptions): SequelizeModuleOptions {
+    const connectionName = options?.connectionName;
+    const database = options?.database || process.env.DB_DATABASE || 'db-schema';
+    const baseOptions: SequelizeModuleOptions = {
+      dialect: options?.dialect || (process.env.DB_DIALECT ? (process.env.DB_DIALECT as Dialect) : 'sqlite'),
+      host: options?.host || process.env.DB_HOST || '127.0.0.1',
+      port: options?.port || Number.parseInt(process.env.DB_PORT || '3306'),
+      username: options?.username || process.env.DB_USER || 'root',
+      password: options?.password || process.env.DB_PASS || 'root-pass',
+      database,
+      storage: database === TEST_MEMORY_DB ? TEST_MEMORY_DB : undefined,
+      models: [],
+      autoLoadModels: false,
+      synchronize: false,
+      logging: options?.logging ?? (process.env?.DB_LOGGING?.toLocaleLowerCase() === 'true'),
+      benchmark: options?.benchmark ?? (process.env?.DB_BENCHMARK?.toLocaleLowerCase() === 'true'),
+      pool: {
+        max: options?.pool?.max ?? 16,
+        min: options?.pool?.min ?? 1,
+        idle: options?.pool?.idle ?? 30_000,
+        acquire: options?.pool?.acquire ?? 10_000,
+      },
     };
 
-    const sequelizeOptions = getSequelizeOptions();
+    // Add connection name if provided (for multiple connections)
+    if (connectionName) {
+      (baseOptions as any).name = connectionName;
+    }
+
+    const sslEnabled = options?.ssl ?? (process.env.DB_SSL && process.env.DB_SSL.toLocaleLowerCase() === 'true');
+    if (sslEnabled) {
+      baseOptions.ssl = true;
+      baseOptions.dialectOptions = {
+        ssl: {
+          require: true,
+        },
+        decimalNumbers: true,
+      };
+    } else {
+      baseOptions.dialectOptions = {
+        decimalNumbers: true,
+      };
+    }
+
+    return baseOptions;
+  }
+
+  static forRoot(options?: DbModuleRootOptions): DynamicModule {
+    const sequelizeOptions = DbModule.buildSequelizeOptions(options);
     const connectionName = options?.connectionName || 'default';
     const sequelizeToken = connectionName === 'default' ? Sequelize : `SEQUELIZE_${connectionName.toUpperCase()}`;
 
@@ -215,6 +222,97 @@ export class DbModule implements OnApplicationBootstrap {
             // Models will be added in onApplicationBootstrap after all modules are loaded
             return sequelizeOptions;
           },
+        }),
+      ],
+      providers: [
+        // Provide SEQUELIZE token for backward compatibility (default connection)
+        // For named connections, use SEQUELIZE_<NAME>
+        {
+          provide: connectionName === 'default' ? 'SEQUELIZE' : sequelizeToken,
+          useFactory: async (sequelize: Sequelize) => {
+            return sequelize;
+          },
+          inject: [Sequelize],
+        },
+        // Re-provide registered model providers/services so they can be exported from this module instance (Nest requires exports to be part of providers).
+        ...DbModuleRegistry.getModelProviders(),
+        ...DbModuleRegistry.getServices(),
+      ],
+      exports: [
+        connectionName === 'default' ? 'SEQUELIZE' : sequelizeToken,
+        SequelizeModule,
+        // Export all registered model providers and services for global access
+        ...DbModuleRegistry.getModelProviders(),
+        ...DbModuleRegistry.getServices(),
+      ],
+    };
+  }
+
+  static forRootAsync(asyncOptions: DbModuleAsyncOptions): DynamicModule {
+    const { connectionName: staticConnectionName, imports: providedImports = [], inject = [], useFactory } = asyncOptions;
+    const connectionName = staticConnectionName || 'default';
+    const sequelizeToken = connectionName === 'default' ? Sequelize : `SEQUELIZE_${connectionName.toUpperCase()}`;
+
+    const buildOptions = async (...args: any[]): Promise<SequelizeModuleOptions> => {
+      const resolved = await useFactory(...args);
+
+      return DbModule.buildSequelizeOptions({ ...resolved, connectionName: staticConnectionName });
+    };
+
+    // For test environment, use direct Sequelize instantiation
+    if (process.env.node_env === 'test') {
+      const testDb = (process.env?.DB_TEST || 'memory')?.toLocaleLowerCase() === 'memory' ? ':memory:' : process.env.DB_TEST;
+      const testSequelize = new Sequelize(`sqlite:${testDb}`);
+
+      // Add registered models (sync will happen in onApplicationBootstrap)
+      const allModels = DbModuleRegistry.getModels();
+      if (allModels.length > 0) {
+        testSequelize.addModels(allModels);
+      }
+
+      return {
+        module: DbModule,
+        imports: [
+          SequelizeModule.forRootAsync({
+            imports: providedImports,
+            inject,
+            useFactory: buildOptions,
+          }),
+        ],
+        providers: [
+          {
+            provide: Sequelize,
+            useValue: testSequelize,
+          },
+          // Provide SEQUELIZE token for backward compatibility
+          {
+            provide: connectionName === 'default' ? 'SEQUELIZE' : sequelizeToken,
+            useFactory: async (sequelize: Sequelize) => {
+              return sequelize;
+            },
+            inject: [Sequelize],
+          },
+          // Re-provide registered model providers/services so they can be exported from this module instance (Nest requires exports to be part of providers).
+          ...DbModuleRegistry.getModelProviders(),
+          ...DbModuleRegistry.getServices(),
+        ],
+        exports: [
+          Sequelize,
+          connectionName === 'default' ? 'SEQUELIZE' : sequelizeToken,
+          SequelizeModule,
+          ...DbModuleRegistry.getModelProviders(),
+          ...DbModuleRegistry.getServices(),
+        ],
+      };
+    }
+
+    return {
+      module: DbModule,
+      imports: [
+        SequelizeModule.forRootAsync({
+          imports: providedImports,
+          inject,
+          useFactory: buildOptions,
         }),
       ],
       providers: [
