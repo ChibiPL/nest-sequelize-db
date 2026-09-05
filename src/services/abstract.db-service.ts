@@ -17,7 +17,17 @@ export abstract class AbstractDbService<TModelAttributes extends {} = any, TCrea
 
   protected _modelName!: string;
 
-  protected paranoid!: boolean;
+  private _paranoidOverride?: boolean;
+
+  protected get paranoid(): boolean {
+    if (this._paranoidOverride !== undefined) return this._paranoidOverride;
+
+    return !!this.dbService.options?.paranoid;
+  }
+
+  protected set paranoid(value: boolean) {
+    this._paranoidOverride = value;
+  }
   
   protected idColumn: (string & keyof T) | Array<(keyof TModelAttributes)> = 'id';
   
@@ -70,22 +80,23 @@ export abstract class AbstractDbService<TModelAttributes extends {} = any, TCrea
   }
   
   onApplicationBootstrap(): any {
-    try {
-      this._modelName = this.dbService.options.name?.singular || '--Unknown--';
-      this._logger = new Logger(this._modelName);
-      
-      if ((this as any).paranoid === undefined) {
-        this.paranoid = !!this.dbService.options.paranoid;
-      } else {
-        this._logger.warn(`[construct] Overwriting PARANOID option of model with: ${ this.paranoid }`);
-      }
-      
-      this._logger.verbose('Loaded Abstract Class Service');
-    } catch (err) {
-      if (!this.dbService.options) (new Logger(this.className)).error(`Model for ${ this.className } must be added to Models of Sequelize!`);
-      
-      throw err;
+    // NOTE: `this.dbService.options` is only populated once `Sequelize#addModels()` has run for this model
+    // (done in DbModule's own onApplicationBootstrap()). NestJS does not guarantee that hook runs before this
+    // one across sibling modules, so `.options` may still be undefined here even though the model is 100%
+    // valid and will be fully initialized by the time the app finishes bootstrapping/starts serving requests.
+    // We must NOT throw in that case - throwing here aborts the entire app bootstrap for a false alarm.
+    const modelOptions = this.dbService?.options;
+
+    this._modelName = modelOptions?.name?.singular || this.dbService?.name || '--Unknown--';
+    this._logger = new Logger(this._modelName);
+
+    if (!modelOptions) {
+      this._logger.warn(`[construct] Model options for "${ this.className }" are not initialized yet (DbModule's addModels()/sync() hook hasn't run before this one) - this is expected under some module import orders and does not affect runtime behavior once the app has finished starting.`);
+
+      return;
     }
+
+    this._logger.verbose('Loaded Abstract Class Service');
   }
   
   async create(creationArguments: CreationAttributes<T>, options?: CreateOptions<Attributes<T>>): Promise<T> {

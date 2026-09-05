@@ -75,8 +75,8 @@ describe('DbModule', () => {
       });
 
       expect(dynamicModule.module).toBe(DbModule);
-      expect(dynamicModule.imports).toBeDefined();
-      expect(dynamicModule.imports?.length).toBeGreaterThan(0);
+      expect(dynamicModule.providers).toBeDefined();
+      expect(dynamicModule.providers?.length).toBeGreaterThan(0);
 
       const registeredModels = DbModuleRegistry.getModels();
       expect(registeredModels).toContain(TestUser);

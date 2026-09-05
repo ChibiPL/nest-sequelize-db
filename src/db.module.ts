@@ -107,6 +107,7 @@ export interface DbModuleAsyncOptions {
 @Module({})
 export class DbModule implements OnApplicationBootstrap {
   protected readonly logger = new Logger(DbModule.name);
+  protected static _logger = new Logger(DbModule.name);
 
   private static migrationExecuted = false;
   
@@ -339,8 +340,28 @@ export class DbModule implements OnApplicationBootstrap {
     };
   }
 
+  // Legacy string-token convention used with @Inject(...) - e.g. @Inject(DbModule.getModelToken(YourEntity)).
+  static getModelToken(model: ModelCtor): string {
+    //
+    DbModule._logger.verbose(`Auto Provider for model initiated: DB_REPOSITORY-${ model.name }`);
+    return `DB_REPOSITORY-${ model.name.toUpperCase() }`;
+  }
+
   static forFeature(options: DbModuleFeatureOptions): DynamicModule {
     const { models = [], services = [], modelProviders = [], migrationsPath, moduleName } = options;
+
+    // Failsafe: auto-generate a modelProviders entry (using the legacy DB_REPOSITORY-<NAME> string-token
+    // convention) for any model that wasn't explicitly given one, so forgetting to add a modelProviders
+    // entry no longer silently breaks DI.
+    const explicitlyProvidedModels = new Set(modelProviders.map(p => (p as any).useValue));
+    const autoModelProviders: Provider[] = models
+      .filter(model => !explicitlyProvidedModels.has(model))
+      .map(model => ({
+        provide: DbModule.getModelToken(model),
+        useValue: model,
+      }));
+
+    const allModelProviders = [...modelProviders, ...autoModelProviders];
 
     // Register models, services, and providers
     if (models.length > 0) {
@@ -349,8 +370,8 @@ export class DbModule implements OnApplicationBootstrap {
     if (services.length > 0) {
       DbModuleRegistry.registerServices(services);
     }
-    if (modelProviders.length > 0) {
-      DbModuleRegistry.registerModelProviders(modelProviders);
+    if (allModelProviders.length > 0) {
+      DbModuleRegistry.registerModelProviders(allModelProviders);
     }
     if (migrationsPath) {
       // Use provided moduleName or try to infer from call stack
@@ -358,23 +379,17 @@ export class DbModule implements OnApplicationBootstrap {
       DbModuleRegistry.registerMigrationPath(migrationsPath, inferredModuleName);
     }
 
-    const featureImports = models.length > 0 ? [SequelizeModule.forFeature(models)] : [];
     const featureExports: any[] = [
       ...services,
-      ...modelProviders.map(p => (p as any).provide).filter(Boolean),
+      ...allModelProviders.map(p => (p as any).provide).filter(Boolean),
     ];
-
-    // Only re-export SequelizeModule when we actually imported it.
-    if (models.length > 0) {
-      featureExports.unshift(SequelizeModule);
-    }
 
     return {
       module: DbModule,
-      imports: featureImports,
+      imports: [],
       providers: [
         ...services,
-        ...modelProviders,
+        ...allModelProviders,
       ],
       exports: featureExports,
     };
