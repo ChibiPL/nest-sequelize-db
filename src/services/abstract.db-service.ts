@@ -70,6 +70,8 @@ export abstract class AbstractDbService<TModelAttributes extends {} = any, TCrea
   }
   
   onApplicationBootstrap(): any {
+    this.assertModelInjected();
+    
     try {
       this._modelName = this.dbService.options.name?.singular || '--Unknown--';
       this._logger = new Logger(this._modelName);
@@ -85,6 +87,27 @@ export abstract class AbstractDbService<TModelAttributes extends {} = any, TCrea
       if (!this.dbService.options) (new Logger(this.className)).error(`Model for ${ this.className } must be added to Models of Sequelize!`);
       
       throw err;
+    }
+  }
+  
+  // Guards against DI silently injecting `undefined`/an unrelated value into `dbService`, which can happen
+  // when a service either forgets to declare @InjectModel(Entity), or (when using the legacy
+  // @Inject('DB_REPOSITORY-X') string-token pattern) forgets to add a matching `modelProviders` entry to
+  // the DbModule.forFeature() call that registers it.
+  private assertModelInjected(): void {
+    const isValidModel = !!this.dbService
+      && typeof (this.dbService as any).findAll === 'function'
+      && typeof (this.dbService as any).create === 'function';
+    
+    if (!isValidModel) {
+      const message = `[${ this.className }] Sequelize model was not injected correctly (got: ${ typeof this.dbService === 'function' ? this.dbService.name : String(this.dbService) }). `
+        + `Either add "@InjectModel(YourEntity)" to the constructor parameter, or (for the legacy string-token pattern) add `
+        + `"@Inject('YOUR_TOKEN')" together with a matching "modelProviders: [{ provide: 'YOUR_TOKEN', useValue: YourEntity }]" entry `
+        + `in the DbModule.forFeature() call of the owning module.`;
+      
+      (new Logger(this.className)).error(message);
+      
+      throw new Error(message);
     }
   }
   

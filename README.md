@@ -124,6 +124,38 @@ export class UsersDbService extends AbstractDbService<UserEntity> {
 }
 ```
 
+### Legacy: string-token injection
+
+`@InjectModel(Entity)` above is the recommended default for new services. The package also fully supports the older string-token convention, useful when a token needs to be shared/re-provided across modules under a custom name. Declare a matching `modelProviders` entry alongside the `models` array in the same `forFeature()` call:
+
+```ts
+import { Inject, Injectable } from '@nestjs/common';
+import { AbstractDbService, DbModule } from '@chibi.pl/nest-sequelize-db';
+import { UserEntity } from './user.entity';
+
+@Injectable()
+export class UsersDbService extends AbstractDbService<UserEntity> {
+  constructor(@Inject('DB_REPOSITORY-USER') model: typeof UserEntity) {
+    super(model);
+  }
+}
+
+@Module({
+  imports: [
+    DbModule.forFeature({
+      models: [UserEntity],
+      modelProviders: [
+        { provide: 'DB_REPOSITORY-USER', useValue: UserEntity },
+      ],
+      services: [UsersDbService],
+    }),
+  ],
+})
+export class UsersModule {}
+```
+
+Both patterns can be mixed freely, even within the same `forFeature()` call — pick whichever fits each service. If a service's model ends up not being injected correctly under either pattern (e.g. a missing `modelProviders` entry), `AbstractDbService.onApplicationBootstrap()` throws a descriptive error identifying the service and how to fix it.
+
 Useful methods include:
 
 - `create(attributes, options)`
