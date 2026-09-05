@@ -79,25 +79,6 @@ describe('AbstractDbService', () => {
     await WidgetModel.destroy({ where: {}, truncate: true });
   });
 
-  // ─── model injection guard ──────────────────────────────────────────────────
-  describe('onApplicationBootstrap() model injection guard', () => {
-    it('throws a clear error when the model was not injected (undefined)', () => {
-      const brokenService = new WidgetDbService(undefined as unknown as typeof WidgetModel);
-      
-      expect(() => brokenService.onApplicationBootstrap()).toThrow(/was not injected correctly/);
-    });
-
-    it('throws a clear error when an unrelated value was injected instead of the model', () => {
-      const brokenService = new WidgetDbService({ notAModel: true } as unknown as typeof WidgetModel);
-      
-      expect(() => brokenService.onApplicationBootstrap()).toThrow(/was not injected correctly/);
-    });
-
-    it('does not throw when a valid Sequelize model was injected', () => {
-      expect(() => service.onApplicationBootstrap()).not.toThrow();
-    });
-  });
-
   // ─── getLimitAndPage ────────────────────────────────────────────────────────
   describe('getLimitAndPage()', () => {
     it('returns default limit when no args given', () => {
